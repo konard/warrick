@@ -2254,7 +2254,13 @@ sub extract_links($) {
 		$url1 =~ s/$directory//i;
 		if(!($url1 =~ m/http:\/\//i))
 		{
-			$url1 = "http://" . trim($tempURI->host) . "" . $tempURI->path . $url1;
+			# Fix for issue #17: Use directory path (without filename) when constructing absolute URLs
+			# from relative ones to prevent malformed paths like http://site.org/file.html/path/file.html
+			my $basePath = $tempURI->path;
+			# Remove filename from path, keeping only the directory portion
+			$basePath =~ s/[^\/]+$//;
+			$basePath = '/' if $basePath eq '';
+			$url1 = "http://" . trim($tempURI->host) . "" . $basePath . $url1;
 		}
 
 		
