@@ -1,0 +1,13 @@
+experiments/test_memento_timegate.sh: line 3: $'\r': command not found
+Testing Memento TimeGate endpoints...
+======================================
+
+experiments/test_memento_timegate.sh: line 7: $'\r': command not found
+experiments/test_memento_timegate.sh: line 11: $'\r': command not found
+Test URL: http://www.cs.odu.edu/
+Test DateTime: Thu, 31 May 2007 20:35:00 GMT
+
+experiments/test_memento_timegate.sh: line 15: $'\r': command not found
+1. Testing Internet Archive TimeGate...
+   URL: http://web.archive.org/web/http://www.cs.odu.edu/
+experiments/test_memento_timegate.sh: line 57: syntax error: unexpected end of file
