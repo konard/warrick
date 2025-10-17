@@ -97,7 +97,7 @@ sub head {
         $acceptDateTimeHeader = " -H \"Accept-Datetime: ".$self->{DateTime}." \" ";
     }
 
-    my $command = "curl -I $acceptDateTimeHeader  $self->{URI} ";
+    my $command = "curl -I $acceptDateTimeHeader  \"$self->{URI}\" ";
     if($self->{Debug} == 1){
         print "DEBUG: " .$command ."\n";
     }
@@ -351,7 +351,7 @@ sub process_uri {
 
     } else {
 
-       $command = "curl @params $acceptDateTimeHeader ". $self->{TimeGate} ."/" . $self->{URI};
+       $command = "curl @params $acceptDateTimeHeader \"". $self->{TimeGate} ."/" . $self->{URI} . "\"";
 
     }
 
@@ -390,7 +390,7 @@ my ($self) = @_;
 
                 $command = "curl -I -L $acceptDateTimeHeader ". $self->{Info}->{TimeGate} ;
             } else {
-                $command = "curl -I -L $acceptDateTimeHeader ". $self->{TimeGate} ."/" . $self->{URI};
+                $command = "curl -I -L $acceptDateTimeHeader \"". $self->{TimeGate} ."/" . $self->{URI} . "\"";
 
             }
             

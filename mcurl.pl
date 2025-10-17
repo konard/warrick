@@ -93,9 +93,12 @@ for (my $i = 0; $i <= $#ARGV; ++$i)	#
 my $URI = $ARGV[$#ARGV];
 $ARGV[$#ARGV] = '';
 
-for (my $i = 0; $i <= $#ARGV; ++$i)	# 
+for (my $i = 0; $i <= $#ARGV; ++$i)	#
 {
-    if ( index($ARGV[$i] , ' ') > -1 ){
+    if ( ( index($ARGV[$i] , ' ') > -1 )
+       or ( index($ARGV[$i] , '?') > -1 )
+       or ( index($ARGV[$i] , '*') > -1 )
+       ) {
 $ARGV[$i] = '"' .$ARGV[$i] . '"';
     }
 }
