@@ -187,6 +187,9 @@ GetOptions(
 			# Log all output to this file
 			"o|output-file=s"	=>	\$opts{output_file},
 			
+			# Look for additional resources to recover
+			"nr|non-recursive" =>  \$opts{recursive_download},
+
 			# Only download  resources in this subdirectory
 			"sd" =>  \$opts{subdir},
 			
