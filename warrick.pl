@@ -210,7 +210,10 @@ GetOptions(
 
 			"nB" => \$opts{no_branding},			
 
-			"ex|exclude=s" => \$opts{exclude},			
+			"ex|exclude=s" => \$opts{exclude},
+
+			# Accept only URLs matching regex patterns in file
+			"A|accept=s" => \$opts{accept},
 
 			# Specify an archive
 			"a|archive=s"	=>	\$opts{archive},
@@ -288,6 +291,33 @@ if(defined $opts{exclude})
 	else
 	{
 		print "Error locating exclusion file \"$EXCLUDEFILE\". Please try again\n\n";
+	}
+}
+
+my $ACCEPTFILE = "NONE";
+if(defined $opts{accept})
+{
+	$ACCEPTFILE = &trim($opts{accept});
+	if($ACCEPTFILE =~ m/^\//i)
+	{
+		#do nothing
+	}
+	elsif($ACCEPTFILE =~ m/^\.\//i)
+	{
+		$ACCEPTFILE =~ s/\.\//$WorkingDir\//i;
+	}
+	else
+	{
+		$ACCEPTFILE = $WorkingDir . "\/" . $ACCEPTFILE;
+	}
+
+	if(-e $ACCEPTFILE)
+	{
+		&echo("Using accept file: $ACCEPTFILE\n\n");
+	}
+	else
+	{
+		print "Error locating accept file \"$ACCEPTFILE\". Please try again\n\n";
 	}
 }
 
@@ -2412,6 +2442,40 @@ sub is_acceptable_link {
 		}
 	}
 
+	##verify this link matches at least one pattern in the provided accept file
+	if(defined $opts{accept}
+		# && (-e $ACCEPTFILE)
+	  )
+	{
+		#print "Reading from Accept File $ACCEPTFILE\n\n";
+		open(AF, $ACCEPTFILE);
+		my @regs = <AF>;
+		close(AF);
+
+		#print "Checking $#regs REGEX $link\n";
+
+		my $matched = 0;
+		foreach my $r (@regs)
+		{
+			$r = trim($r);
+			#print "REGEX $r\n";
+			if($link =~ /$r/)
+			{
+				&echo("REGEX ACCEPTED:: $link <==> $r\n");
+				#&logIt("REGEX ACCEPTED:: $link <==> $r\n");
+				$matched = 1;
+				last;
+			}
+		}
+
+		# If no patterns matched, reject this URL
+		if(!$matched)
+		{
+			&echo("REGEX REJECTED (no match):: $link\n");
+			return 0;
+		}
+	}
+
 
 	##now we have to figure out if the URIs come from the same host
 	##(they must be from the same site in order to be added to the frontier)
@@ -2534,9 +2598,12 @@ OPTIONS:
 					which the memento was recovered.
    -nB				Remove the branding from the archives (this is the
 					default)
-   -ex | --exclude=F		Exclude (do not recover) URIs that meet the regular 
-				expressions listed (newline delimited) in the specific 
+   -ex | --exclude=F		Exclude (do not recover) URIs that meet the regular
+				expressions listed (newline delimited) in the specific
 				file F
+   -A  | --accept=F		Accept only URIs that match at least one of the regular
+				expressions listed (newline delimited) in the specific
+				file F. Useful for downloading only specific file types.
    -a | --archive=[ia|wc|ai|loc|uk|eu|bl|b|g|y|aweu|nara|cdlib|diigo|can|wikia|wiki]
 				Specify the archive to recover resources from. Specify
 					a single archive. Options are [Internet Archive|
@@ -2574,7 +2641,12 @@ EXAMPLES
    Resume a previously suspended recovery job from a save file:
 
       ./warrick.pl -R 1234_myserver.save
-      
+
+   Recover only JPEG images from a photo gallery site (requires accept_patterns.txt
+   containing regex like "\.jpg$" or "\.jpeg$"):
+
+      ./warrick.pl -A accept_patterns.txt http://www.photogallery.com/
+
 HELP
 }
 #-a | --archive=[ia|wc|ai|loc|uk|eu|bl|b|g|y|aweu|nara|cdlib|diigo|can|wikia|wiki]
