@@ -47,6 +47,16 @@ use File::Spec::Functions qw(catfile);
 use File::Copy;
 use FindBin;
 use Getopt::Long;
+
+# Try to import GetOptionsFromString if available (requires Getopt::Long 2.37+)
+# For older versions, we'll parse manually in resumeFlags()
+BEGIN {
+	eval {
+		require Getopt::Long;
+		Getopt::Long->import('GetOptionsFromString');
+	};
+}
+
 use HTTP::Cookies;
 use HTTP::Status qw(status_message);
 use IO::Socket;
@@ -3352,9 +3362,12 @@ sub resumeFlags($)
 #my $ret = GetOptionsFromString($string, ...);
 #my %opts;
 
-use Getopt::Long qw(:config no_ignore_case);
-use Getopt::Long qw(GetOptionsFromString);
-my $ret = GetOptionsFromString(trim($_[0]), 
+# Check if GetOptionsFromString is available
+my $ret;
+if (defined &GetOptionsFromString) {
+	# Modern Getopt::Long (2.37+)
+	Getopt::Long::Configure("no_ignore_case");
+	$ret = GetOptionsFromString(trim($_[0]), 
 			# Turn on debug output
 			"d|debug"	=>	\$opts{debug},
 			
@@ -3418,9 +3431,85 @@ my $ret = GetOptionsFromString(trim($_[0]),
 
 			# Specify an archive
 			"a|archive"	=>	\$opts{archive},
-		) 
+		);
 		#|| exit($!)
-		;
+} else {
+	# Fallback for older Getopt::Long versions (< 2.37)
+	# Temporarily manipulate @ARGV to use GetOptions
+	my @saved_argv = @ARGV;
+	require Text::ParseWords;
+	@ARGV = Text::ParseWords::shellwords(trim($_[0]));
+
+	Getopt::Long::Configure("no_ignore_case");
+	$ret = GetOptions(
+			# Turn on debug output
+			"d|debug"	=>	\$opts{debug},
+
+			# Save reconstructed files in this directory
+			"D|target-directory=s"	=>	\$opts{download_dir},
+
+			# Set the range of dates to recover from IA
+			"dr|date-recover=s" => \$opts{date_range},
+
+			"h|help"	=>	\$opts{help},
+			"E|html-extension" => \$opts{save_dynamic_with_html_ext},
+
+			# make entire url (except query string) lowercase.  Useful for
+			# web servers running on Windows
+			"ic|ignore-case"	=> \$opts{ignore_case_urls},
+
+			# Read URLs from an input file
+			"i|input-file=s"	=>	\$opts{input_file},
+
+			# Convert all URLs from absolute to relative (uses same names as wget)
+			"k|convert-links" =>	\$opts{convert_urls_to_relative},
+
+			# limit the directory level warrick recovers to
+			"l|limit-dir=i"	=>	\$opts{limit_dir},
+
+			"n|number-download=i"	=>	\$opts{max_downloads_and_store},
+
+			"nv|no-verbose" => \$opts{no_verbose_output},
+
+			# Don't overwrite files already downloaded.
+			"nc|no-clobber" => \$opts{no_clobber},
+
+			# Don't use the cache.
+			"xc|no-cache" => \$opts{no_cache},
+
+			# Log all output to this file
+			"o|output-file=s"	=>	\$opts{output_file},
+
+			# Look for additional resources to recover
+			"nr|non-recursive" =>  \$opts{recursive_download},
+
+			# Show the current version being used
+			"V|version"	=> \$opts{version},
+
+			# Convert a non-html resources to have html extensions
+			"vl|view-local"	=> \$opts{view_local},
+
+			# Set the wait in seconds.  Best to use the default.
+			"w|wait=i"	=>	\$opts{wait},
+
+			# Resume some saved state in a stored file.
+			"R|resume=s" => \$opts{resume_file},
+
+			# Execute the code as a test of the warrick installation
+			"T" => \$opts{TEST},
+
+			#retain the branding from the archives
+			"B" => \$opts{keep_branding},
+
+			"ex|exclude=s" => \$opts{exclude},
+
+			# Specify an archive
+			"a|archive"	=>	\$opts{archive},
+		);
+
+	# Restore original @ARGV
+	@ARGV = @saved_argv;
+}
 
 ##debugging the above function:
 &echo("No cache: $opts{no_cache}\n\n");
