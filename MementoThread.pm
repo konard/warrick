@@ -5,12 +5,13 @@ use URI;
 
 use FindBin;
 use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/brass/lib";
 
 #constructor
 sub new {
 
     my $self = {
-        URI     => undef,   #String, This is the input URI that we need to retrieve its mementos 
+        URI     => undef,   #String, This is the input URI that we need to retrieve its mementos
         Text    => undef,   #String, the URI content
         RedirectionList   => undef,
         FollowEmbedded  => 0,
@@ -22,6 +23,8 @@ sub new {
         Override => 0,
         RobotsTG => undef,
         ReplaceFile => undef,
+        LoadBalancer => undef,  # Optional load balancer instance
+        CurrentNode => undef,   # Track which node is being used
         Headers => {
                     status=> undef,
                     vary => 0,  #Vary default false
@@ -85,6 +88,50 @@ sub setOverride {
 sub setReplaceFile() {
     my ($self, $lReplaceFile ) = @_;
     $self->{ReplaceFile} = $lReplaceFile if defined($lReplaceFile);
+}
+
+sub setLoadBalancer {
+    my ($self, $loadBalancer) = @_;
+    $self->{LoadBalancer} = $loadBalancer if defined($loadBalancer);
+
+    if (defined($self->{LoadBalancer})) {
+        # Use load balancer to select a node
+        my $node = $self->{LoadBalancer}->get_next_node();
+        $self->{CurrentNode} = $node;
+        $self->{TimeGate} = $self->{LoadBalancer}->get_timegate_url($node);
+
+        if($self->{Debug} == 1){
+            print "DEBUG: Using load balanced node: $node->{name}\n";
+            print "DEBUG: TimeGate set to: $self->{TimeGate}\n";
+        }
+
+        # Increment connection count
+        $self->{LoadBalancer}->increment_connections($node);
+    }
+}
+
+sub releaseNode {
+    my ($self) = @_;
+
+    if (defined($self->{LoadBalancer}) && defined($self->{CurrentNode})) {
+        $self->{LoadBalancer}->decrement_connections($self->{CurrentNode});
+
+        if($self->{Debug} == 1){
+            print "DEBUG: Released node: $self->{CurrentNode}->{name}\n";
+        }
+    }
+}
+
+sub recordFailure {
+    my ($self) = @_;
+
+    if (defined($self->{LoadBalancer}) && defined($self->{CurrentNode})) {
+        $self->{LoadBalancer}->record_failure($self->{CurrentNode});
+
+        if($self->{Debug} == 1){
+            print "DEBUG: Recorded failure for node: $self->{CurrentNode}->{name}\n";
+        }
+    }
 }
 
 sub head {
