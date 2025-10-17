@@ -41,7 +41,7 @@ sub NormalizeUrl {
 	#		http://foo.org -> http://foo.org/
 	# - Replace https with http
 	#		https://foo.org/ -> http://foo.org/
-	# - Remove the fragement (section link) from a URL
+	# - Remove the fragment (section link) from a URL
 	#   	http://foo.org/bar.html#section1 -> http://foo.org/bar.html
 	# - Remove :80 from URL
 	#		http://foo.org:80/bar.html -> http://foo.org/bar.html
@@ -113,7 +113,7 @@ sub NormalizeUrl {
 	    $url =~ s|(^http://)$domain|$1$domain_lc|;
 	}
 	
-	# Get rid of fragement 
+	# Get rid of fragment
 	$url =~ s/#.*$//;
 	
 	# Remove '/../' from URL
