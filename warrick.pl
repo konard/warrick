@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# 
-# warrick.pl 
+#
+# warrick.pl
 #
 # Developed by Frank McCown at Old Dominion University - 2005
 # Contact: fmccown@cs.odu.edu
@@ -8,7 +8,7 @@
 # Copyright (C) 2005-2010 by Frank McCown
 #
 my $Version = '2.2.2';
-# 
+#
 # This program's grandmother was Webrepeaper by Brain D. Foy
 # http://search.cpan.org/dist/webreaper/
 #
@@ -31,6 +31,8 @@ my $Version = '2.2.2';
 #
 
 use strict;
+use utf8;
+use open ':std', ':encoding(UTF-8)';
 
 use FindBin;
 
@@ -2064,7 +2066,7 @@ sub removeBranding($)
 	&echo("Removing IA Branding of $filename!!\n\n");
 
 
-	open(DAT, $filename);
+	open(DAT, "<:utf8", $filename);
 	my @content = <DAT>;
 	close(DAT);
 
@@ -2142,7 +2144,7 @@ sub removeBranding($)
 	
 
 
-	open (DAT, ">$filename");
+	open (DAT, ">:utf8", $filename);
 	print DAT $html;
 	close(DAT);
 }
@@ -2155,9 +2157,9 @@ sub removeIAlinks($)
 	{
 		&echo("exiting out of ia links...\n\n");
 		return;
-	}	
+	}
 
-	open(DAT, $filename);
+	open(DAT, "<:utf8", $filename);
 	my @content = <DAT>;
 	close(DAT);
 
@@ -2165,7 +2167,7 @@ sub removeIAlinks($)
 
 	$html =~ s/http:\/\/web\.archive\.org\/web\/.*\/http:\/\//http:\/\//gi;
 
-	open (DAT, ">$filename");
+	open (DAT, ">:utf8", $filename);
 	print DAT $html;
 	close(DAT);
 }
@@ -2202,13 +2204,13 @@ sub extract_links($) {
 		$otherRecovered++;
 	}	
 
-	my $targetFile =  trim($outfile);	
+	my $targetFile =  trim($outfile);
 
 	&echo("Search HTML resource $targetFile for links to other missing resources...\n");
 
-	open(DAT, $targetFile) or &echo("No such file $targetFile\n\n");
+	open(DAT, "<:utf8", $targetFile) or &echo("No such file $targetFile\n\n");
 	my @raw_data=<DAT>;
-	my $contents = join("\n", @raw_data);	
+	my $contents = join("\n", @raw_data);
 	close(DAT);
 
 	if($#raw_data < 0)
@@ -3110,7 +3112,7 @@ sub allRelative($)
 
 	##need to also make sure this $targetFilePath is good for windows, too
 	my @data;
-	open(DAT,  $targetFilePath) or die $! . " $targetFilePath not found\n\n";
+	open(DAT, "<:utf8", $targetFilePath) or die $! . " $targetFilePath not found\n\n";
 	@data=<DAT>;
 	close(DAT);
 
@@ -3130,10 +3132,10 @@ sub allRelative($)
 		{
 			$data[$i] = "";
 		}
-	}	
+	}
 
 
-	open(MYOUT, ">$targetFilePath");
+	open(MYOUT, ">:utf8", $targetFilePath);
 	print MYOUT join("\n", @data);
 	close(MYOUT);
 	sleep(10);
