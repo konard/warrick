@@ -7,7 +7,7 @@
 #
 # Copyright (C) 2005-2010 by Frank McCown
 #
-my $Version = '2.2.2';
+my $Version = '2.3:A';
 # 
 # This program's grandmother was Webrepeaper by Brain D. Foy
 # http://search.cpan.org/dist/webreaper/
