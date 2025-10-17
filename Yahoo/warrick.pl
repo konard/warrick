@@ -404,6 +404,11 @@ if (defined $opts{download_dir}) {
 
 # Set of all urls to reconstruct (URL frontier)
 my @Url_frontier = ();
+
+# Hash table to track URLs in the frontier for O(1) duplicate checking
+# This eliminates the need for linear search through @Url_frontier
+my %Url_frontier_hash = ();
+
 my @TimeGateResponse = ();
 
 #print "\nCurrent time: " . localtime . "\n\n";
@@ -969,6 +974,7 @@ sub extract_links($) {
 	if(defined $opts{recursive_download})
 	{
 		@Url_frontier = ();
+		%Url_frontier_hash = ();
 		return 0;
 	}
 
@@ -1016,11 +1022,12 @@ sub extract_links($) {
 
 			$GLOBALURL1 = $url1;
 
-			if(inArray(@Url_frontier, $url1) == 0)
+			if(!exists $Url_frontier_hash{$url1})
 			{
 				#print " and it's acceptable\n";
 
 				push(@Url_frontier, $url1);
+				$Url_frontier_hash{$url1} = 1;
 			}
 			else
 			{
