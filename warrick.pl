@@ -3090,22 +3090,56 @@ sub allRelative($)
 	###########################
 
 	##I doubt these below things even do anything...but better save than sorry.
+	##Optimization: only apply sed filtering for the specific archive being used (issue #16)
 
-	$tmp = `sed -i 's/\.wstub.archive.org\/\.\\//g' "$targetFilePath"`;
-	$tmp = `sed -i 's/http:\\/\\/wayback.archive\-it.org\\/[0-9]*\\/[0-9a-z]*.\\///g' "$targetFilePath"`;
-	$tmp = `sed -i 's/http:\\/\\/webarchive.loc.gov\\/.\\/*\\///g' "$targetFilePath"`;  #untested
-	$tmp = `sed -i 's/http:\\/\\/www.webarchive.org.uk\\/wayback\\/archive\\/[0-9a-z]*\\///g' "$targetFilePath"`;  #untested
-	#$tmp = `sed -i 's///g' "$targetFilePath"`;  #untested - archiefWeb uses really strange ways to reference mementos
-	$tmp = `sed -i 's/http:\\/\\/collectionscanada.gc.ca\\/pam_archives\\/index.php?//g' "$targetFilePath"`;  #untested
-	$tmp = `sed -i 's/http:\\/\\/www.webcitation.org\\/getfile\\?fileid=[0-9a-z]*.//g' "$targetFilePath"`;  #untested
-	$tmp = `sed -i 's/http:\\/\\/webcache.googleusercontent.com\\/search?q=cache:.//g' "$targetFilePath"`;  #untested
-	$tmp = `sed -i 's/http:\\/\\/cc.bingj.com\\/cache.aspx?//g' "$targetFilePath"`;  #untested
-	$tmp = `sed -i 's/http:\\/\\/74\\.6\\.238\\.254\\/search\\/srpcache?//g' "$targetFilePath"`;  #untested
-	$tmp = `sed -i 's/http:\\/\\/www.webarchive.org.uk\\/wayback\\/archive\\/[0-9]*\///g' "$targetFilePath"`;  #untested
-	$tmp = `sed -i 's/ http:\\/\\/webharvest.gov\\/congress110th\\/xmlquery?//g' "$targetFilePath"`;  #untested
-	$tmp = `sed -i 's/http:\\/\\/webarchives.cdlib.org\\///g' "$targetFilePath"`;  #untested
-	$tmp = `sed -i 's/http:\\/\\/www.diigo.com\\/cached\\/showpage\\/upload?//g' "$targetFilePath"`;  #untested
-	$tmp = `sed -i 's/http:\\/\\/api.wayback.archive.org\\/list\\/timemap\\/link\\///g' "$targetFilePath"`;  #untested
+	if(!defined $opts{archive} || $opts{archive} =~ /^ia{1,1}/i)
+	{
+		$tmp = `sed -i 's/\.wstub.archive.org\/\.\\//g' "$targetFilePath"`;
+		$tmp = `sed -i 's/http:\\/\\/api.wayback.archive.org\\/list\\/timemap\\/link\\///g' "$targetFilePath"`;  #untested
+	}
+	if(!defined $opts{archive} || $opts{archive} =~ /^ai{1,1}/i)
+	{
+		$tmp = `sed -i 's/http:\\/\\/wayback.archive\-it.org\\/[0-9]*\\/[0-9a-z]*.\\///g' "$targetFilePath"`;
+	}
+	if(!defined $opts{archive} || $opts{archive} =~ /^loc{1,1}/i)
+	{
+		$tmp = `sed -i 's/http:\\/\\/webarchive.loc.gov\\/.\\/*\\///g' "$targetFilePath"`;  #untested
+		$tmp = `sed -i 's/ http:\\/\\/webharvest.gov\\/congress110th\\/xmlquery?//g' "$targetFilePath"`;  #untested
+	}
+	if(!defined $opts{archive} || $opts{archive} =~ /^uk{1,1}/i)
+	{
+		$tmp = `sed -i 's/http:\\/\\/www.webarchive.org.uk\\/wayback\\/archive\\/[0-9a-z]*\\///g' "$targetFilePath"`;  #untested
+		$tmp = `sed -i 's/http:\\/\\/www.webarchive.org.uk\\/wayback\\/archive\\/[0-9]*\///g' "$targetFilePath"`;  #untested
+	}
+	if(!defined $opts{archive} || $opts{archive} =~ /^can{1,1}/i)
+	{
+		$tmp = `sed -i 's/http:\\/\\/collectionscanada.gc.ca\\/pam_archives\\/index.php?//g' "$targetFilePath"`;  #untested
+	}
+	if(!defined $opts{archive} || $opts{archive} =~ /^wc{1,1}/i)
+	{
+		$tmp = `sed -i 's/http:\\/\\/www.webcitation.org\\/getfile\\?fileid=[0-9a-z]*.//g' "$targetFilePath"`;  #untested
+	}
+	if(!defined $opts{archive} || $opts{archive} =~ /^g{1,1}/i)
+	{
+		$tmp = `sed -i 's/http:\\/\\/webcache.googleusercontent.com\\/search?q=cache:.//g' "$targetFilePath"`;  #untested
+	}
+	if(!defined $opts{archive} || $opts{archive} =~ /^b{1,1}/i)
+	{
+		$tmp = `sed -i 's/http:\\/\\/cc.bingj.com\\/cache.aspx?//g' "$targetFilePath"`;  #untested
+	}
+	if(!defined $opts{archive} || $opts{archive} =~ /^y{1,1}/i)
+	{
+		$tmp = `sed -i 's/http:\\/\\/74\\.6\\.238\\.254\\/search\\/srpcache?//g' "$targetFilePath"`;  #untested
+	}
+	if(!defined $opts{archive} || $opts{archive} =~ /^cdlib{1,1}/i)
+	{
+		$tmp = `sed -i 's/http:\\/\\/webarchives.cdlib.org\\///g' "$targetFilePath"`;  #untested
+	}
+	if(!defined $opts{archive} || $opts{archive} =~ /^diigo{1,1}/i)
+	{
+		$tmp = `sed -i 's/http:\\/\\/www.diigo.com\\/cached\\/showpage\\/upload?//g' "$targetFilePath"`;  #untested
+	}
+	#Note: archiefWeb (eu/aweu) uses really strange ways to reference mementos - no sed filtering needed
 
 
 	##need to also make sure this $targetFilePath is good for windows, too
