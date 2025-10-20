@@ -29,6 +29,14 @@ information on Memento, please visit http://www.mementoweb.org/.)
 
 **************************************************************
 
+Alternative Tools:
+
+If you're looking for similar functionality, you may also be interested in:
+- Wayback Machine Downloader: https://github.com/hartator/wayback-machine-downloader
+  A Ruby tool for downloading websites from the Internet Archive's Wayback Machine
+
+**************************************************************
+
 We want to know if you have if you have used Warrick to 
 reconstruct your lost website.  Please e-mail me at jbrunelle@cs.odu.edu
 
