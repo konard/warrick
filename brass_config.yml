@@ -1,0 +1,60 @@
+# Brass Configuration File
+# Configuration for distributed Brass interface with load balancing
+
+# Load Balancing Strategy
+# Options: round_robin, least_connections, random, weighted_round_robin
+load_balancing_strategy: round_robin
+
+# Memento Aggregator Nodes
+# Each node has its own memento aggregator for discovering mementos
+aggregator_nodes:
+  - name: node1
+    host: mementoproxy1.cs.odu.edu
+    port: 80
+    timegate_path: /aggr/timegate
+    weight: 1
+    enabled: true
+    max_connections: 100
+
+  - name: node2
+    host: mementoproxy2.cs.odu.edu
+    port: 80
+    timegate_path: /aggr/timegate
+    weight: 1
+    enabled: true
+    max_connections: 100
+
+  - name: node3
+    host: mementoproxy3.cs.odu.edu
+    port: 80
+    timegate_path: /aggr/timegate
+    weight: 1
+    enabled: true
+    max_connections: 100
+
+# Health Check Configuration
+health_check:
+  enabled: true
+  interval_seconds: 30
+  timeout_seconds: 5
+  failure_threshold: 3
+
+# Queue Configuration
+queue:
+  max_jobs: 1000
+  max_concurrent_jobs: 10
+  job_timeout_hours: 24
+  retry_attempts: 3
+
+# Email Notification
+email:
+  enabled: true
+  smtp_server: localhost
+  smtp_port: 25
+  from_address: brass@cs.odu.edu
+
+# Web Interface
+web_interface:
+  port: 8080
+  max_upload_size_mb: 10
+  session_timeout_minutes: 60
