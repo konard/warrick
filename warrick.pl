@@ -3473,8 +3473,8 @@ sub IAlister()
 	&echo("Domain: $Domain \n\n");
 
 	my $cmd = `$curlCmd`;
-	
-	open(FILE, "lister.o") or &echo("Unable to open file lister.o");
+
+	open(FILE, $listerOut) or &echo("Unable to open file $listerOut");
         my @data = <FILE>;
         close(FILE);
 
