@@ -65,6 +65,7 @@ use CachedUrls;
 #use XML::Simple;
 use HTTP::Date;
 use Logger;
+use ArchivePatterns;  # For configurable archive pattern handling (issue #33)
 #WWW::Mechanize;
 use HTML::LinkExtractor;	#for link extraction
 
@@ -142,6 +143,9 @@ my $paramList = join (" ", @ARGV);
 # Global variable to keep track of a manipulated target URI
 my $GLOBALURL1;
 
+# Global ArchivePatterns object for configurable URI rewriting (issue #33)
+my $ArchivePatternsObj;
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # Get all command-line options
@@ -210,10 +214,13 @@ GetOptions(
 
 			"nB" => \$opts{no_branding},			
 
-			"ex|exclude=s" => \$opts{exclude},			
+			"ex|exclude=s" => \$opts{exclude},
 
 			# Specify an archive
 			"a|archive=s"	=>	\$opts{archive},
+
+			# Specify custom archive patterns config file (issue #33)
+			"ap|archive-patterns=s" => \$opts{archive_patterns_file},
 		) || exit($!);
 
 
@@ -239,6 +246,18 @@ if ($^O eq "MSWin32") {
 	#&echo("Converting from $WorkingDir to ");
 	#$WorkingDir = UrlUtil::WindowsConvertUrlPath($WorkingDir);
 	#&echo("$WorkingDir\n\n");
+}
+
+# Initialize ArchivePatterns object (issue #33)
+# Use custom config file if provided, otherwise use default
+my $patterns_config = $opts{archive_patterns_file} || "${DirOffset}archive_patterns.conf";
+$ArchivePatternsObj = ArchivePatterns->new($patterns_config);
+if ($ArchivePatternsObj->is_loaded()) {
+	my $stats = $ArchivePatternsObj->get_stats();
+	&echo("Loaded archive patterns: " . $stats->{uri_rewrite_count} . " URI rewrites, " .
+	      $stats->{branding_removal_count} . " branding removals\n");
+} else {
+	&echo("Warning: No archive patterns loaded. Using fallback behavior.\n");
 }
 
 
@@ -2061,8 +2080,7 @@ sub removeBranding($)
 		return;
 	}
 
-	&echo("Removing IA Branding of $filename!!\n\n");
-
+	&echo("Removing archive branding from $filename\n\n");
 
 	open(DAT, $filename);
 	my @content = <DAT>;
@@ -2070,77 +2088,85 @@ sub removeBranding($)
 
 	my $html = join(" ", @content);
 
-	#if($html =~ m/<!--.JAVASCRIPT APPENDED BY WAYBACK MACHINE/i)
-	#if($html =~ m/<script type=\"text\/javascript\">/i)
-	if($html =~ s/<script type=\"text\/javascript\" src=\"http:\/\/staticweb\.archive\.org\/js\/disclaim.js\"><\/script>//gi)
-	{
-	        print "FOUND IT!\n\n";
-	}
+	# Use configurable archive patterns (issue #33)
+	# If ArchivePatterns loaded successfully, use it; otherwise fall back to hardcoded patterns
+	if (defined $ArchivePatternsObj && $ArchivePatternsObj->is_loaded()) {
+		&echo("Applying configurable branding removal patterns...\n");
+		my $count = $ArchivePatternsObj->apply_branding_removals(\$html);
+		&echo("Applied $count branding removal patterns\n");
+	} else {
+		# Fallback to original hardcoded patterns if config not loaded
+		&echo("Using fallback hardcoded branding removal patterns...\n");
 
-	#if($html =~ m/<script type=\"text\/javascript\">\s*var wmNotice.+/i)
-	if($html =~ s/var wmNotice.+\n//gi)
-	{
-	        print "js1\n";
-	}
-	if($html =~ s/var wmHide.+\n//gi)
-	{        
-	        print "got JS2\n";            
-	}
-	if($html =~ s/<!-- BEGIN WAYBACK TOOLBAR INSERT -->.*<!-- END WAYBACK TOOLBAR INSERT -->//sgi)
-	{        
-	        print "got IA1\n";            
-	}
+		#if($html =~ m/<!--.JAVASCRIPT APPENDED BY WAYBACK MACHINE/i)
+		#if($html =~ m/<script type=\"text\/javascript\">/i)
+		if($html =~ s/<script type=\"text\/javascript\" src=\"http:\/\/staticweb\.archive\.org\/js\/disclaim.js\"><\/script>//gi)
+		{
+		        print "FOUND IT!\n\n";
+		}
 
-	#print "FOREACH\n";
+		#if($html =~ m/<script type=\"text\/javascript\">\s*var wmNotice.+/i)
+		if($html =~ s/var wmNotice.+\n//gi)
+		{
+		        print "js1\n";
+		}
+		if($html =~ s/var wmHide.+\n//gi)
+		{
+		        print "got JS2\n";
+		}
+		if($html =~ s/<!-- BEGIN WAYBACK TOOLBAR INSERT -->.*<!-- END WAYBACK TOOLBAR INSERT -->//sgi)
+		{
+		        print "got IA1\n";
+		}
 
-	&echo("Removing webcitation junk from the beginning\n\n");
+		#print "FOREACH\n";
 
-	if($html =~ s/Content\-Type\: text\/html//i)
-	{        
-	        print "got CT1\n";            
+		&echo("Removing webcitation junk from the beginning\n\n");
+
+		if($html =~ s/Content\-Type\: text\/html//i)
+		{
+		        print "got CT1\n";
+		}
+
+		&echo("Removing google junk\n\n");
+		if($html =~ s/<base href=\".*\n//gi)
+		{
+		        print "got GG1\n";
+		}
+		if($html =~ s/<div>\&nbsp;<\/div><\/div><\/div><div style\=\"position:relative\">//gi)
+		{
+		        print "got GG2\n";
+		}
+		if($html =~ s/<meta http\-equiv\=\"Content\-Type\" content\=\"text\/html; charset\=UTF\-8\">//gi)
+		{
+		        print "got GG3\n";
+		}
+
+		&echo("Removing yahoo & bing junk\n\n");
+		if($html =~ s/<base href=\".*\n//gi)
+		{
+		        print "got GG1\n";
+		}
+
+		#archiveit banner removal
+		if($html =~ s/<!-- Start Wayback Rewrite JS Include -->.*<!-- End Wayback Rewrite JS Include -->//sgi)
+		{
+	                print "got IA1\n";
+		}
+
+		if($html =~ s/<!--\s*FILE ARCHIVED ON.*All versions<\/a> of this archived page\.//sgi)
+		{
+	                print "got IA2\n";
+		}
+
+		#national archive removal
+		if($html =~ s/<div id\=\"webArchiveLogo\".*<\/noscript><\/div>\s*<\/div>//sgi)
+		{
+	                print "got IA1\n";
+		}
+
+		&echo("Removing other? junk\n\n");
 	}
-
-	&echo("Removing google junk\n\n");
-	if($html =~ s/<base href=\".*\n//gi)
-	{
-	        print "got GG1\n";
-	}
-	if($html =~ s/<div>\&nbsp;<\/div><\/div><\/div><div style\=\"position:relative\">//gi)
-	{
-	        print "got GG2\n";
-	}
-	if($html =~ s/<meta http\-equiv\=\"Content\-Type\" content\=\"text\/html; charset\=UTF\-8\">//gi)        
-	{
-	        print "got GG3\n";
-	}
-
-	&echo("Removing yahoo & bing junk\n\n");
-	if($html =~ s/<base href=\".*\n//gi)
-	{
-	        print "got GG1\n";
-	}
-
-	#archiveit banner removal
-	if($html =~ s/<!-- Start Wayback Rewrite JS Include -->.*<!-- End Wayback Rewrite JS Include -->//sgi)
-	{
-                print "got IA1\n";
-	}
-
-	if($html =~ s/<!--\s*FILE ARCHIVED ON.*All versions<\/a> of this archived page\.//sgi)                
-	{
-                print "got IA2\n";
-	}
-
-	#national archive removal
-	if($html =~ s/<div id\=\"webArchiveLogo\".*<\/noscript><\/div>\s*<\/div>//sgi)                        
-	{
-                print "got IA1\n";
-	}
-
-
-	&echo("Removing other? junk\n\n");
-	
-
 
 	open (DAT, ">$filename");
 	print DAT $html;
@@ -2541,10 +2567,14 @@ OPTIONS:
 				Specify the archive to recover resources from. Specify
 					a single archive. Options are [Internet Archive|
 					Web Citation|Archive-It|Library of Congress|
-					National Archives of UK|ArcheifWeb|British 
+					National Archives of UK|ArcheifWeb|British
 					Library|Bing|Google|Yahoo|Archiefweb|
 					nara|CDLib|Diigo|Canadian Archives|Wikia|Wiki]
-					
+
+   -ap | --archive-patterns=F	Specify custom archive patterns configuration file F
+					for URI rewriting and branding removal. If not specified,
+					uses default archive_patterns.conf file.
+
 
 EXAMPLES
 
@@ -3089,23 +3119,30 @@ sub allRelative($)
 	#these links asume a / is acceptable, but windows will want a \
 	###########################
 
-	##I doubt these below things even do anything...but better save than sorry.
-
-	$tmp = `sed -i 's/\.wstub.archive.org\/\.\\//g' "$targetFilePath"`;
-	$tmp = `sed -i 's/http:\\/\\/wayback.archive\-it.org\\/[0-9]*\\/[0-9a-z]*.\\///g' "$targetFilePath"`;
-	$tmp = `sed -i 's/http:\\/\\/webarchive.loc.gov\\/.\\/*\\///g' "$targetFilePath"`;  #untested
-	$tmp = `sed -i 's/http:\\/\\/www.webarchive.org.uk\\/wayback\\/archive\\/[0-9a-z]*\\///g' "$targetFilePath"`;  #untested
-	#$tmp = `sed -i 's///g' "$targetFilePath"`;  #untested - archiefWeb uses really strange ways to reference mementos
-	$tmp = `sed -i 's/http:\\/\\/collectionscanada.gc.ca\\/pam_archives\\/index.php?//g' "$targetFilePath"`;  #untested
-	$tmp = `sed -i 's/http:\\/\\/www.webcitation.org\\/getfile\\?fileid=[0-9a-z]*.//g' "$targetFilePath"`;  #untested
-	$tmp = `sed -i 's/http:\\/\\/webcache.googleusercontent.com\\/search?q=cache:.//g' "$targetFilePath"`;  #untested
-	$tmp = `sed -i 's/http:\\/\\/cc.bingj.com\\/cache.aspx?//g' "$targetFilePath"`;  #untested
-	$tmp = `sed -i 's/http:\\/\\/74\\.6\\.238\\.254\\/search\\/srpcache?//g' "$targetFilePath"`;  #untested
-	$tmp = `sed -i 's/http:\\/\\/www.webarchive.org.uk\\/wayback\\/archive\\/[0-9]*\///g' "$targetFilePath"`;  #untested
-	$tmp = `sed -i 's/ http:\\/\\/webharvest.gov\\/congress110th\\/xmlquery?//g' "$targetFilePath"`;  #untested
-	$tmp = `sed -i 's/http:\\/\\/webarchives.cdlib.org\\///g' "$targetFilePath"`;  #untested
-	$tmp = `sed -i 's/http:\\/\\/www.diigo.com\\/cached\\/showpage\\/upload?//g' "$targetFilePath"`;  #untested
-	$tmp = `sed -i 's/http:\\/\\/api.wayback.archive.org\\/list\\/timemap\\/link\\///g' "$targetFilePath"`;  #untested
+	# Use configurable archive patterns (issue #33)
+	# If ArchivePatterns loaded successfully, use it; otherwise fall back to hardcoded patterns
+	if (defined $ArchivePatternsObj && $ArchivePatternsObj->is_loaded()) {
+		&echo("Applying configurable URI rewrite patterns...\n");
+		$ArchivePatternsObj->apply_uri_rewrites($targetFilePath);
+	} else {
+		# Fallback to original hardcoded patterns if config not loaded
+		&echo("Using fallback hardcoded URI rewrite patterns...\n");
+		$tmp = `sed -i 's/\.wstub.archive.org\/\.\\//g' "$targetFilePath"`;
+		$tmp = `sed -i 's/http:\\/\\/wayback.archive\-it.org\\/[0-9]*\\/[0-9a-z]*.\\///g' "$targetFilePath"`;
+		$tmp = `sed -i 's/http:\\/\\/webarchive.loc.gov\\/.\\/*\\///g' "$targetFilePath"`;  #untested
+		$tmp = `sed -i 's/http:\\/\\/www.webarchive.org.uk\\/wayback\\/archive\\/[0-9a-z]*\\///g' "$targetFilePath"`;  #untested
+		#$tmp = `sed -i 's///g' "$targetFilePath"`;  #untested - archiefWeb uses really strange ways to reference mementos
+		$tmp = `sed -i 's/http:\\/\\/collectionscanada.gc.ca\\/pam_archives\\/index.php?//g' "$targetFilePath"`;  #untested
+		$tmp = `sed -i 's/http:\\/\\/www.webcitation.org\\/getfile\\?fileid=[0-9a-z]*.//g' "$targetFilePath"`;  #untested
+		$tmp = `sed -i 's/http:\\/\\/webcache.googleusercontent.com\\/search?q=cache:.//g' "$targetFilePath"`;  #untested
+		$tmp = `sed -i 's/http:\\/\\/cc.bingj.com\\/cache.aspx?//g' "$targetFilePath"`;  #untested
+		$tmp = `sed -i 's/http:\\/\\/74\\.6\\.238\\.254\\/search\\/srpcache?//g' "$targetFilePath"`;  #untested
+		$tmp = `sed -i 's/http:\\/\\/www.webarchive.org.uk\\/wayback\\/archive\\/[0-9]*\///g' "$targetFilePath"`;  #untested
+		$tmp = `sed -i 's/ http:\\/\\/webharvest.gov\\/congress110th\\/xmlquery?//g' "$targetFilePath"`;  #untested
+		$tmp = `sed -i 's/http:\\/\\/webarchives.cdlib.org\\///g' "$targetFilePath"`;  #untested
+		$tmp = `sed -i 's/http:\\/\\/www.diigo.com\\/cached\\/showpage\\/upload?//g' "$targetFilePath"`;  #untested
+		$tmp = `sed -i 's/http:\\/\\/api.wayback.archive.org\\/list\\/timemap\\/link\\///g' "$targetFilePath"`;  #untested
+	}
 
 
 	##need to also make sure this $targetFilePath is good for windows, too
