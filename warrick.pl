@@ -1083,7 +1083,7 @@ for($i = $frontierIndex; $i < $#Url_frontier + 1; $i++)
 	my $tm = $Mementos[0];
 	&echo ("My memento to get: |$tm|\n\n");
 
-	##if the timemap is null, then there was probably a 404 or other failure at the proxy, and we 
+	##if the timemap is null, then there was probably a 404 or other failure at the proxy, and we
 	##should just ignore the URI and move to the next.
 	if(!(&trim($tm) eq NULL))
 	{
@@ -1091,16 +1091,25 @@ for($i = $frontierIndex; $i < $#Url_frontier + 1; $i++)
 		my @nextFile = ();
 		push(@nextFile, &recover_resource($tm, $Url_frontier[$i]));
 
+		##check if file was skipped due to no-clobber
+		my $skipped_noclobber = 0;
+		if(defined $nextFile[0] && $nextFile[0] =~ /^NOCLOBBER_SKIP:/)
+		{
+			$skipped_noclobber = 1;
+			##remove the prefix for downstream processing
+			$nextFile[0] =~ s/^NOCLOBBER_SKIP://;
+		}
+
 		##determi the recovered file(s)
         	my $testStr = &trim($nextFile[0]);
         	if($testStr eq "" && ($IS_MCURL eq 0))
         	{
-			##if the recovery failed, try the backup memento... 
+			##if the recovery failed, try the backup memento...
 			&echo("trying the backup memento...\n\n");
         	        push(@nextFile, &recover_resource($backupMem, $Path));
         	}
 
-		if($useInFile == 0)
+		if($useInFile == 0 && !$skipped_noclobber)
 		{
 			for(my $j = 0; $j < $#nextFile+1; $j++)
 			{
@@ -1109,11 +1118,22 @@ for($i = $frontierIndex; $i < $#Url_frontier + 1; $i++)
 				&extract_links($nextFile[$j]);
 			}
 		}
+
+		##when no-clobber skips a file, don't sleep before moving to the next file
+		if(defined $opts{wait} && !$skipped_noclobber)
+		{
+			&echo("Waiting...\n\n");
+			sleep($opts{wait});
+		}
 	}
-	if(defined $opts{wait})
+	else
 	{
-		&echo("Waiting...\n\n");
-		sleep($opts{wait});
+		##still sleep if wait is defined and we didn't skip due to no-clobber
+		if(defined $opts{wait})
+		{
+			&echo("Waiting...\n\n");
+			sleep($opts{wait});
+		}
 	}
    }
 }
@@ -1160,6 +1180,12 @@ sub begin_recovery()
 	## specified in Path
 	@extractionFile = ();
 	push(@extractionFile,  recover_resource($tm, $Path));
+
+	##strip NOCLOBBER_SKIP prefix if present
+	if(defined $extractionFile[0] && $extractionFile[0] =~ /^NOCLOBBER_SKIP:/)
+	{
+		$extractionFile[0] =~ s/^NOCLOBBER_SKIP://;
+	}
 
 	##the paths that were downloaded have their files extracted
 	#my $testStr = trim(join("", @extractionFile));
@@ -1762,7 +1788,7 @@ sub recover_resource($){
 		$outfile = $outfile . "_webcitation" . $numDls;
 	}	
 
-	##checking to make sure this file hasn't been downloaded before. If this file exists in this directory, 
+	##checking to make sure this file hasn't been downloaded before. If this file exists in this directory,
 	#and no clobber is on, we won't download it again
 	if(defined $opts{no_clobber})
 	{
@@ -1771,7 +1797,7 @@ sub recover_resource($){
 		{
 			&echo("No clobber says we can't overwrite $outfile because it exists\n");
 			$unclobbered++;
-			return $outfile;
+			return "NOCLOBBER_SKIP:$outfile";
 		}
 		else
 		{
