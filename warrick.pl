@@ -248,6 +248,10 @@ if ($^O eq "MSWin32") {
 
 my @Url_frontier = ();
 
+# Hash table to track URLs in the frontier for O(1) duplicate checking
+# This eliminates the need for linear search through @Url_frontier
+my %Url_frontier_hash = ();
+
 my $TimeGateFile = "";
 
 if($opts{windows})
@@ -976,8 +980,9 @@ elsif(!defined $opts{resume_file})
 		else
 		{
          		$fFrontier[$j] = &trim($fFrontier[$j]);
-			
+
 	                push(@Url_frontier, &trim($fFrontier[$j]));
+	                $Url_frontier_hash{&trim($fFrontier[$j])} = 1;
 
 			if(defined $opts{ignore_case_urls})
 			{
@@ -2274,11 +2279,11 @@ sub extract_links($) {
 
 			$GLOBALURL1 = $url1;
 
-			##if this url is not in the array
-			if(inArray($url1) == 0)
-			#if(inArray(@Url_frontier, $url1) == 0)
+			##if this url is not in the hash table (O(1) lookup)
+			if(!exists $Url_frontier_hash{$url1})
 			{
 				push(@Url_frontier, $url1);
+				$Url_frontier_hash{$url1} = 1;
 			}
 			else
 			{
@@ -3327,6 +3332,7 @@ sub resumeState($)
 		if(!(trim($tempStr eq "")))
 		{
 			push(@Url_frontier, trim($tempStr));
+			$Url_frontier_hash{trim($tempStr)} = 1;
 		}
 	}
 
@@ -3503,10 +3509,11 @@ sub IAlister()
 	                #if ($listedUri ne "" && is_acceptable_link($listedUri)) {
 	                if (1) {
 				$GLOBALURL1 = $listedUri;
-				if(inArray($listedUri) == 0)
+				if(!exists $Url_frontier_hash{$listedUri})
 	                        {
 					&logIt("Added $listedUri to the frontier from the list\n");
 	                                push(@Url_frontier, $listedUri);
+	                                $Url_frontier_hash{$listedUri} = 1;
 					$numFromListerQueries++;
 	                        }
 	                        else
